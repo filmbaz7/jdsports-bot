@@ -4,12 +4,14 @@ import logging
 import os
 import threading
 import time
-from db_helper import init_db, get_top_discounts
+from db_helper import init_db, get_top_discounts  # فرض می‌گیریم این ماژول تو دیتابیس رو مدیریت می‌کنه
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = os.getenv("8097282527:AAHbkJedYXpcFsEymooCnG6WewFmi51Ol5k")
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # متغیر محیطی باید ست شده باشه
+if not BOT_TOKEN:
+    logging.error("Error: BOT_TOKEN environment variable is not set!")
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
 user_chat_ids = set()
@@ -17,7 +19,12 @@ user_chat_ids = set()
 def send_message(chat_id, text):
     url = f'{TELEGRAM_API_URL}/sendMessage'
     payload = {'chat_id': chat_id, 'text': text}
-    requests.post(url, json=payload)
+    try:
+        resp = requests.post(url, json=payload)
+        if resp.status_code != 200:
+            logging.error(f"Failed to send message to {chat_id}: {resp.text}")
+    except Exception as e:
+        logging.error(f"Exception while sending message to {chat_id}: {e}")
 
 def discount_job():
     while True:
@@ -56,7 +63,7 @@ def webhook():
     return 'ok', 200
 
 if __name__ == '__main__':
-    init_db()
+    init_db()  # مقداردهی دیتابیس (فقط یک بار)
     threading.Thread(target=discount_job, daemon=True).start()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
