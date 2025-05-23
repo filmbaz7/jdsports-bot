@@ -1,76 +1,40 @@
+from flask import Flask, request
+import requests
+import logging
 import os
-from telegram.ext import Updater, CommandHandler
-from apscheduler.schedulers.background import BackgroundScheduler
 
-TOKEN = os.getenv("7972069490:AAGIhpzOQ_2pZ1iq6F8AWNM7DFN0TlPsWU8")
-WEBHOOK_URL = os.getenv(WEBHOOK_URL = "https://jdsports-bot.onrender.com/")
-PORT = int(os.environ.get("PORT", 8443))
+app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
-bot = updater.bot
+BOT_TOKEN = os.environ.get('BOT_TOKEN')  # توکن ربات رو از متغیر محیطی بخون
 
-USERS_FILE = "users.txt"
+TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
-def save_user(chat_id):
-    if not os.path.exists(USERS_FILE):
-        open(USERS_FILE, 'w').close()
-    with open(USERS_FILE, "r") as f:
-        ids = f.read().splitlines()
-    if str(chat_id) not in ids:
-        with open(USERS_FILE, "a") as f:
-            f.write(str(chat_id) + "\n")
+@app.route('/', methods=['GET'])
+def home():
+    return 'Bot is running!', 200
 
-def send_to_all(text):
-    if not os.path.exists(USERS_FILE):
-        return
-    with open(USERS_FILE, "r") as f:
-        ids = f.read().splitlines()
-    for user_id in ids:
-        try:
-            bot.send_message(chat_id=user_id, text=text)
-        except Exception as e:
-            print(f"❌ خطا در ارسال به {user_id}: {e}")
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = request.get_json()
+    logging.info(f"Received update: {update}")
 
-def start(update, context):
-    chat_id = update.message.chat_id
-    save_user(chat_id)
-    update.message.reply_text("👋 سلام! به محض اینکه تخفیف خوبی پیدا کنیم، بهت پیام می‌دیم.")
+    if 'message' in update:
+        chat_id = update['message']['chat']['id']
+        text = update['message'].get('text', '')
 
-import subprocess
-import json
+        send_message(chat_id, f'پیام شما دریافت شد: {text}')
 
-def fetch_discounts():
-    subprocess.run(["python", "scraper_runner.py"])
-    if not os.path.exists("output.json"):
-        return
-    with open("output.json", encoding="utf-8") as f:
-        data = json.load(f)
+    return 'ok', 200
 
-    if not data:
-        return
+def send_message(chat_id, text):
+    url = f'{TELEGRAM_API_URL}/sendMessage'
+    payload = {
+        'chat_id': chat_id,
+        'text': text
+    }
+    requests.post(url, json=payload)
 
-    for item in data:
-        text = f"""🛍️ {item['name']}
-💸 قبل: €{item['priceWas']}  👉 حالا: €{item['priceIs']}
-📉 تخفیف: {item['discount']}٪
-🔗 لینک محصول: {item['link']}"""
-        send_to_all(text)
-
-def main():
-    dispatcher.add_handler(CommandHandler("start", start))
-
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_discounts, 'interval', minutes=30)
-    scheduler.start()
-
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN
-    )
-    updater.bot.set_webhook(f"{WEBHOOK_URL}/{TOKEN}")
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
