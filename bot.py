@@ -5,6 +5,7 @@ import os
 import threading
 import time
 from db_helper import init_db, get_top_discounts  # فرض می‌گیریم این ماژول تو دیتابیس رو مدیریت می‌کنه
+from scraper_runner import run_spider
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
