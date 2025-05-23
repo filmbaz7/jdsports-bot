@@ -2,7 +2,7 @@ import os
 from telegram.ext import Updater, CommandHandler
 from apscheduler.schedulers.background import BackgroundScheduler
 
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("7972069490:AAGIhpzOQ_2pZ1iq6F8AWNM7DFN0TlPsWU8")
 WEBHOOK_URL = os.getenv(WEBHOOK_URL = "https://jdsports-bot.onrender.com/")
 PORT = int(os.environ.get("PORT", 8443))
 
