@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: jdsports-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./start.sh
+    envVars:
+      - key: TOKEN
+        value: <توکن رباتت>
+      - key: WEBHOOK_URL
+        value: https://<نام-اپلیکیشن-تو>.onrender.com
