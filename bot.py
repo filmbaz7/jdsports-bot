@@ -15,7 +15,22 @@ TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
 DB_PATH = 'users.db'
 
+def check_write_permission(path='.'):
+    test_file = os.path.join(path, 'test_write.txt')
+    try:
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        logging.info("دسترسی نوشتن روی پوشه وجود دارد ✅")
+        return True
+    except Exception as e:
+        logging.error(f"دسترسی نوشتن روی پوشه وجود ندارد ❌: {e}")
+        return False
+
 def init_db():
+    if not check_write_permission():
+        logging.error("دسترسی نوشتن وجود ندارد. دیتابیس ساخته نمی‌شود.")
+        return False
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
@@ -25,6 +40,8 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    logging.info("دیتابیس و جدول‌ها ساخته شدند.")
+    return True
 
 def add_user(chat_id):
     conn = sqlite3.connect(DB_PATH)
@@ -33,7 +50,7 @@ def add_user(chat_id):
         cursor.execute('INSERT INTO users (chat_id) VALUES (?)', (chat_id,))
         conn.commit()
     except sqlite3.IntegrityError:
-        # chat_id قبلاً اضافه شده بود
+        # chat_id قبلا بود، کاری نمی‌کنیم
         pass
     finally:
         conn.close()
@@ -108,10 +125,9 @@ def webhook():
     return 'ok', 200
 
 if __name__ == '__main__':
-    init_db()  # دیتابیس رو درست کن
-
-    port = int(os.environ.get('PORT', 5000))
-
-    threading.Thread(target=discount_job, daemon=True).start()
-
-    app.run(host='0.0.0.0', port=port)
+    if init_db():
+        port = int(os.environ.get('PORT', 5000))
+        threading.Thread(target=discount_job, daemon=True).start()
+        app.run(host='0.0.0.0', port=port)
+    else:
+        logging.error("ربات به دلیل نداشتن دسترسی نوشتن اجرا نمی‌شود.")
